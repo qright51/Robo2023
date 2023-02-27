@@ -1,30 +1,37 @@
 #include <Servo.h>
 
+// Constants
+
 #define pinMotorL 4
 #define pinMotorR 3
 #define touchSensor 2
 #define musicPing 5
 
+int trackerPin[5] = {8,9,10,11,12};
+volatile unsigned long int minTime = 40000;
+
+// Dynamic variables
+
 Servo motorL, motorR;
 
 volatile bool isRunning = false;
-
-int trackerPin[5] = {8,9,10,11,12};
 int trackerValue[5] = {0,0,0,0,0};
 int first = -1;
 int last = -1;
 float median = 3.0;
 
-volatile unsigned long int minTime = 40000;
+// Functions
 
 void beginTracking(){
-  for(int i=0; i<90; i++){
-    motor(i,i);
-    delay(10);
+  if(!isRunning){
+    for(int i=0; i<90; i++){
+      motor(i,i);
+      delay(10);
+    }
+    isRunning=true;
+    minTime = 40000+millis();
+    requestNewSong();
   }
-  isRunning=true;
-  minTime=40000+millis();
-  requestNewSong();
 }
 
 void requestNewSong(){
@@ -67,6 +74,16 @@ void lineTracker(){
     motor(0,0);
   }
 
+  if(millis()>=(minTime+20000)){
+    isRunning = false;
+    motor(90,90);
+    for(int i=90; i>=0; i--){
+      motor(i,i);
+      delay(10);
+    }
+    motor(0,0);
+  }
+
   if(isRunning==true){
     if(first==-1 || last==-1){
       if(median<3){ 
@@ -96,24 +113,28 @@ void lineTracker(){
       if(median==1) motor(20,100);
       if(median==1.5) motor(35,100);
       if(median==2) motor(55,100);
-      if(median==2.5) motor(70,80);
+      if(median==2.5) motor(70,80); // 70,80
     }
     else if(median>3){
       if(median==5) motor(100,20);
       if(median==4.5) motor(100,35);
       if(median==4) motor(100,55);
-      if(median==3.5) motor(80,70);
+      if(median==3.5) motor(80,70); // 80,70
     }
     else{
-      motor(90,90);
+      motor(90,90); // 90,90
     }
   } 
 }
 
+// Main function
 
+void setup() {
+  delay(1000);
 
-void setup() {  
   attachInterrupt(digitalPinToInterrupt(touchSensor),beginTracking,RISING);
+  delay(500);
+  
   pinMode(musicPing, OUTPUT);
   digitalWrite(musicPing, LOW);
   
@@ -124,9 +145,11 @@ void setup() {
   motorR.attach(pinMotorR);
   motor(0,0);
 
-  minTime += millis();
   isRunning = false;
+  minTime += millis();
 }
+
+// Loop function
 
 void loop() {
   if(isRunning){
